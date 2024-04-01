@@ -1,0 +1,14 @@
+{
+	"Project" : [
+	{
+		"Username": "prduser",
+		"env": "prd"
+	},
+	{
+		"Username": "uatuser",
+		"env": "uat"
+	
+	}
+
+	]
+}
