@@ -1,0 +1,1587 @@
+Install Terraform --->
+1)  yum install -y yum-utils
+2)  yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+3)  yum -y install terraform
+4) terraform version
+
+###############################################
+
+1) Go to https://alh.learnondemand.net/
+2) Register with Training Key:
+60900FA61AF94726	Abhijan
+1A76713B81CC43BA	Dinesh
+54FECA14FB7449A0	Rajesh Balagam
+7168582F960A40C1	Kumaran
+2BBCBA4FFD8C42E1	Mahendra
+5602A0952BA244E5	Padmapriya
+58E005459E754072	Pankaj
+BF923573974A4C84	Rajagopal
+B12EC63A7F784646	Ravindra
+D1BA9CBA26D24540	Smarak
+C2017502D5BC4BDF	Srinivasa Vithal
+
+
+3) Click on Register after entering your key
+4) Fill in details and click Save.
+5) Accept Agreement and Launch Lab.
+6) Under Resources, get Promo Code. Save it on your system.
+
+##################################################
+
+Redeem using https://www.microsoftazurepass.com/
+
+###################################################
+
+Balance Check: https://www.microsoftazuresponsorships.com/balance
+
+###################################################
+
+Create CSR using openssl
+openssl req -newkey rsa:4096 -nodes -keyout "mycert.key" -out "mycert.csr"
+
+
+Signing CSR
+openssl x509 -signkey "mycert.key" -in "mycert.csr" -req -days 30 -out "mycert.crt"
+
+Creating PFX
+openssl pkcs12 -export -out "mycert.pfx" -inkey "mycert.key" -in "mycert.crt"
+
+###################################################
+
+Use WinScp(C:\DevOps_Setup_Rocky) to copy certificate (mycert.crt) on Windows Desktop
+IP: 192.168.49.128
+UserName: root
+Password: wfuser
+
+###################################################
+
+Open your Azure Portal on Lab machine.
+
+###################################################
+
+
+[root@master ~]# cd
+[root@master ~]# mkdir azure_vm/    ^C
+[root@master ~]# cd azure_vm/
+[root@master azure_vm]# cat main.tf
+terraform {
+  required_providers {
+    azurerm = {
+      source = "hashicorp/azurerm"
+      version = "3.97.1"
+    }
+  }
+}
+
+provider "azurerm" {
+  features {}
+  client_id                   = "37a0369c-41ef-43bb-bb6c-27ea9f246ce0"
+  client_certificate_path     = "/root/mycert.pfx"
+  tenant_id                   = "df8af829-df8a-41fe-8679-3e0a616165c5"
+  subscription_id             = "bbbd26d1-25ec-4756-8dd7-085194738e44"
+}
+
+
+resource "azurerm_resource_group" "example" {
+  name     = "sagar-rg"
+  location = "Central India"
+}
+
+resource "azurerm_virtual_network" "example" {
+  name                = "sagar-vnet"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+}
+
+resource "azurerm_subnet" "example" {
+  name                 = "sagar-subnet"
+  resource_group_name  = azurerm_resource_group.example.name
+  virtual_network_name = azurerm_virtual_network.example.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+resource "azurerm_network_interface" "example" {
+  name                = "sagar-nic"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.example.id
+    private_ip_address_allocation = "Dynamic"
+  }
+}
+
+resource "azurerm_linux_virtual_machine" "example" {
+  name                = "sagar-machine"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  size                = "Standard_B1ls"
+  admin_username      = "adminuser"
+  admin_password      = "Sagar@123@Sagar"
+  disable_password_authentication = "false"
+
+  network_interface_ids = [
+    azurerm_network_interface.example.id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+}
+[root@master azure_vm]# terraform init     ^C
+[root@master azure_vm]# terraform validate    ^C
+[root@master azure_vm]# terraform plan    ^C
+[root@master azure_vm]# terraform apply    ^C
+[root@master azure_vm]# ls -tlr terraform.tfstate
+-rw-r--r-- 1 root root 10484 Mar 28 16:03 terraform.tfstate
+
+
+################################################
+
+[root@master azure_vm]# terraform destroy          ^C
+[root@master azure_vm]#
+[root@master azure_vm]# terraform destroy -target=azurerm_linux_virtual_machine.example      ^C
+
+
+################################################
+
+terraform {
+  backend "local" {
+    path = "/etc/myfile"
+  }
+
+  backend "artifactory" {
+    path = "https://myartficatory.shell.com/projectname/foldername/filename"
+  }
+
+  backend "http" {
+   path = "someurl"
+  }
+
+  required_providers {
+    azurerm = {
+      source = "hashicorp/azurerm"
+      version = "3.97.1"
+    }
+  }
+}
+
+####################################################
+
+
+
+
+[root@master ~]# cd
+[root@master ~]# mkdir azure_vars/    ^C
+[root@master ~]# cd azure_vars/
+[root@master azure_vars]# cat vars.tf
+variable "client_id" {
+  default = "37a0369c-41ef-43bb-bb6c-27ea9f246ce0"
+}
+
+variable "client_certificate_path" {
+  default = "/root/mycert.pfx"
+}
+
+variable "tenant_id" {
+  default = "df8af829-df8a-41fe-8679-3e0a616165c5"
+}
+
+variable "subscription_id" {
+  default = "bbbd26d1-25ec-4756-8dd7-085194738e44"
+}
+
+variable "prefix" {
+  default = "sagar"
+}
+
+variable "location" {
+  default = "Central India"
+}
+
+variable "myvm" {
+  default = { size = "Standard_B1s", admin_username = "adminuser", admin_password = "Sagar@123@Sagar" }
+}
+[root@master azure_vars]# cat provider.tf
+terraform {
+  required_providers {
+    azurerm = {
+      source = "hashicorp/azurerm"
+      version = "3.97.1"
+    }
+  }
+}
+
+
+provider "azurerm" {
+  features {}
+  client_id                   = var.client_id
+  client_certificate_path     = var.client_certificate_path
+  tenant_id                   = var.tenant_id
+  subscription_id             = var.subscription_id
+}
+[root@master azure_vars]# cat main.tf
+resource "azurerm_resource_group" "example" {
+  name     = "${var.prefix}-rg"
+  location = var.location
+}
+
+resource "azurerm_virtual_network" "example" {
+  name                = "${var.prefix}-vnet"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+}
+
+resource "azurerm_subnet" "example" {
+  name                 = "${var.prefix}-subnet"
+  resource_group_name  = azurerm_resource_group.example.name
+  virtual_network_name = azurerm_virtual_network.example.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+resource "azurerm_public_ip" "example" {
+  name                = "${var.prefix}-pubip"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  allocation_method   = "Static"
+}
+
+resource "azurerm_network_interface" "example" {
+  name                = "${var.prefix}-nic"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.example.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.example.id
+  }
+}
+
+resource "azurerm_linux_virtual_machine" "example" {
+  name                = "${var.prefix}-vm"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  size                = var.myvm.size
+  admin_username      = var.myvm.admin_username
+  admin_password      = var.myvm.admin_password
+  disable_password_authentication = "false"
+
+  network_interface_ids = [
+    azurerm_network_interface.example.id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+}
+[root@master azure_vars]# cat out.tf
+output "MyPublicIP" {
+  value = azurerm_linux_virtual_machine.example.public_ip_address
+}
+[root@master azure_vars]# terraform init    ^C
+[root@master azure_vars]# terraform validate       ^C
+[root@master azure_vars]# terraform plan           ^C
+[root@master azure_vars]# terraform apply -auto-approve      ^C
+
+#################################################################
+
+[root@master ~]# cd
+[root@master ~]# mkdir azure_prov/    ^C
+[root@master ~]# cd azure_prov/
+[root@master azure_prov]# cp -fr ../azure_vars/*.tf .            ^C
+[root@master azure_prov]# cat main.tf
+resource "azurerm_resource_group" "example" {
+  name     = "${var.prefix}-rg"
+  location = var.location
+}
+
+resource "azurerm_virtual_network" "example" {
+  name                = "${var.prefix}-vnet"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+}
+
+resource "azurerm_subnet" "example" {
+  name                 = "${var.prefix}-subnet"
+  resource_group_name  = azurerm_resource_group.example.name
+  virtual_network_name = azurerm_virtual_network.example.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+resource "azurerm_public_ip" "example" {
+  name                = "${var.prefix}-pubip"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  allocation_method   = "Static"
+}
+
+resource "azurerm_network_interface" "example" {
+  name                = "${var.prefix}-nic"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.example.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.example.id
+  }
+}
+
+
+resource "azurerm_linux_virtual_machine" "example" {
+  name                = "${var.prefix}-vm"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  size                = var.myvm.size
+  admin_username      = var.myvm.admin_username
+  admin_password      = var.myvm.admin_password
+  disable_password_authentication = "false"
+
+  network_interface_ids = [
+    azurerm_network_interface.example.id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+
+  provisioner "local-exec" {
+    command = "echo ${self.public_ip_address} > myfile"
+  }
+
+  provisioner "local-exec" {
+    command = "echo echo Starting > myscript.sh ; echo sleep 20 >> myscript.sh ; echo echo Running >> myscript.sh ; echo sleep 20 >> myscript.sh ; echo echo Finishing >> myscript.sh"
+  }
+
+  provisioner "file" {
+    source = "myscript.sh"
+    destination = "/tmp/myscript.sh"
+    connection {
+      type = "ssh"
+      user = var.myvm.admin_username
+      password = var.myvm.admin_password
+      host = self.public_ip_address
+    }
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo chmod 755 /tmp/myscript.sh",
+      "sudo /bin/sh /tmp/myscript.sh"
+    ]
+    connection {
+      type = "ssh"
+      user = var.myvm.admin_username
+      password = var.myvm.admin_password
+      host = self.public_ip_address
+    }
+  }
+}
+[root@master azure_prov]# terraform init   ^C
+[root@master azure_prov]# terraform plan    ^C
+[root@master azure_prov]# terraform apply -auto-approve   ^C
+
+
+#####################################################
+
+[root@master ~]# cd
+[root@master ~]# mkdir azure_count/   ^C
+[root@master ~]# cd azure_count/
+[root@master azure_count]# cp -fr ../azure_vars/*.tf .      ^C
+[root@master azure_count]# cat main.tf
+resource "azurerm_resource_group" "example" {
+  name     = "${var.prefix}-rg"
+  location = var.location
+}
+
+resource "azurerm_virtual_network" "example" {
+  name                = "${var.prefix}-vnet"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+}
+
+resource "azurerm_subnet" "example" {
+  name                 = "${var.prefix}-subnet"
+  resource_group_name  = azurerm_resource_group.example.name
+  virtual_network_name = azurerm_virtual_network.example.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+#azurerm_public_ip.example[0]
+#azurerm_public_ip.example[1]
+#azurerm_public_ip.example[2]
+resource "azurerm_public_ip" "example" {
+  count = 3
+  name                = "${var.prefix}-pubip-${count.index}"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  allocation_method   = "Static"
+}
+
+#azurerm_network_interface.example[0]
+#azurerm_network_interface.example[1]
+#azurerm_network_interface.example[2]
+resource "azurerm_network_interface" "example" {
+  count = 3
+  name                = "${var.prefix}-nic-${count.index}"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.example.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.example[count.index].id
+  }
+}
+
+#azurerm_linux_virtual_machine.example[0]
+#azurerm_linux_virtual_machine.example[1]
+#azurerm_linux_virtual_machine.example[2]
+resource "azurerm_linux_virtual_machine" "example" {
+  count = 3
+  name                = "${var.prefix}-vm-${count.index}"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  size                = var.myvm.size
+  admin_username      = var.myvm.admin_username
+  admin_password      = var.myvm.admin_password
+  disable_password_authentication = "false"
+
+  network_interface_ids = [
+    azurerm_network_interface.example[count.index].id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+}
+[root@master azure_count]# cat out.tf
+output "MyPublicIP" {
+  value = azurerm_linux_virtual_machine.example[*].public_ip_address
+}
+[root@master azure_count]# terraform init    ^C
+[root@master azure_count]# terraform plan     ^C
+[root@master azure_count]# terraform apply -auto-approve     ^C
+[root@master azure_count]# terraform state list
+azurerm_linux_virtual_machine.example[0]
+azurerm_linux_virtual_machine.example[1]
+azurerm_linux_virtual_machine.example[2]
+azurerm_network_interface.example[0]
+azurerm_network_interface.example[1]
+azurerm_network_interface.example[2]
+azurerm_public_ip.example[0]
+azurerm_public_ip.example[1]
+azurerm_public_ip.example[2]
+azurerm_resource_group.example
+azurerm_subnet.example
+azurerm_virtual_network.example
+
+
+
+########################################################
+
+[root@master ~]# cd
+[root@master ~]# mkdir azure_foreach/   ^C
+[root@master ~]# cd azure_foreach/
+[root@master azure_foreach]# cp -fr ../azure_vars/*.tf .    ^C
+[root@master azure_foreach]# cat vars.tf | tail -4
+
+variable "mymap" {
+  default = { blr = ["B1s", "blruser"], hyd = ["B1ls", "hyduser"], mum = ["F2", "mumuser"] }
+}
+[root@master azure_foreach]# cat main.tf
+resource "azurerm_resource_group" "example" {
+  name     = "${var.prefix}-rg"
+  location = var.location
+}
+
+resource "azurerm_virtual_network" "example" {
+  name                = "${var.prefix}-vnet"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+}
+
+resource "azurerm_subnet" "example" {
+  name                 = "${var.prefix}-subnet"
+  resource_group_name  = azurerm_resource_group.example.name
+  virtual_network_name = azurerm_virtual_network.example.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+#azurerm_public_ip.example["blr"]
+#azurerm_public_ip.example["hyd"]
+#azurerm_public_ip.example["mum"]
+resource "azurerm_public_ip" "example" {
+  for_each = var.mymap
+  name                = "${var.prefix}-pubip-${each.key}"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  allocation_method   = "Static"
+}
+
+#azurerm_network_interface.example["blr"]
+#azurerm_network_interface.example["hyd"]
+#azurerm_network_interface.example["mum"]
+resource "azurerm_network_interface" "example" {
+  for_each = var.mymap
+  name                = "${var.prefix}-nic-${each.key}"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.example.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.example[each.key].id
+  }
+}
+
+#azurerm_linux_virtual_machine.example["blr"]
+#azurerm_linux_virtual_machine.example["hyd"]
+#azurerm_linux_virtual_machine.example["mum"]
+resource "azurerm_linux_virtual_machine" "example" {
+  for_each = var.mymap
+  name                = "${var.prefix}-vm-${each.key}"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  size                = "Standard_${each.value[0]}"
+  admin_username      = each.value[1]
+  admin_password      = var.myvm.admin_password
+  disable_password_authentication = "false"
+
+  network_interface_ids = [
+    azurerm_network_interface.example[each.key].id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+}
+[root@master azure_foreach]# cat out.tf
+output "MyPublicIPs" {
+  value = [
+    for x in azurerm_linux_virtual_machine.example:
+      x.public_ip_address
+  ]
+}
+
+
+#####################################################
+
+
+[root@master ~]# cd
+[root@master ~]# mkdir azure_ifelse/   ^C
+[root@master ~]# cd azure_ifelse/
+[root@master azure_ifelse]# cp -fr ../azure_count/*.tf .      ^C
+[root@master azure_ifelse]# cat vars.tf | tail -3
+
+variable "env" {
+}
+[root@master azure_ifelse]# cat main.tf
+resource "azurerm_resource_group" "example" {
+  name     = "${var.prefix}-rg"
+  location = var.location
+}
+
+resource "azurerm_virtual_network" "example" {
+  name                = "${var.prefix}-vnet"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+}
+
+resource "azurerm_subnet" "example" {
+  name                 = "${var.prefix}-subnet"
+  resource_group_name  = azurerm_resource_group.example.name
+  virtual_network_name = azurerm_virtual_network.example.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+#azurerm_public_ip.example[0]
+#azurerm_public_ip.example[1]
+#azurerm_public_ip.example[2]
+resource "azurerm_public_ip" "example" {
+  count = "${ var.env == "prd" ? 3 : var.env == "uat" ? 2 : 1 }"
+  name                = "${var.prefix}-pubip-${count.index}"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  allocation_method   = "Static"
+}
+
+#azurerm_network_interface.example[0]
+#azurerm_network_interface.example[1]
+#azurerm_network_interface.example[2]
+resource "azurerm_network_interface" "example" {
+  count = "${ var.env == "prd" ? 3 : var.env == "uat" ? 2 : 1 }"
+  name                = "${var.prefix}-nic-${count.index}"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.example.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.example[count.index].id
+  }
+}
+
+#azurerm_linux_virtual_machine.example[0]
+#azurerm_linux_virtual_machine.example[1]
+#azurerm_linux_virtual_machine.example[2]
+resource "azurerm_linux_virtual_machine" "example" {
+  count = "${ var.env == "prd" ? 3 : var.env == "uat" ? 2 : 1 }"
+  name                = "${var.prefix}-vm-${count.index}-${var.env}"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  size                = var.myvm.size
+  admin_username      = var.myvm.admin_username
+  admin_password      = var.myvm.admin_password
+  disable_password_authentication = "false"
+
+  network_interface_ids = [
+    azurerm_network_interface.example[count.index].id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+}
+
+#####################################################
+
+
+[root@master ~]# cd
+[root@master ~]# mkdir azure_template/   ^C
+[root@master ~]# cd azure_template/
+[root@master azure_template]# cp -fr ../azure_ifelse/*.tf .     ^C
+[root@master azure_template]# DELETED variable "env" BLOCK from vars.tf    ^C
+[root@master azure_template]# cat main.tf
+#trimspace(data.template_file.myenv.rendered)
+data "template_file" "myenv" {
+  template = file("${path.module}/env")
+}
+
+resource "azurerm_resource_group" "example" {
+  name     = "${var.prefix}-rg"
+  location = var.location
+}
+
+resource "azurerm_virtual_network" "example" {
+  name                = "${var.prefix}-vnet"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+}
+
+resource "azurerm_subnet" "example" {
+  name                 = "${var.prefix}-subnet"
+  resource_group_name  = azurerm_resource_group.example.name
+  virtual_network_name = azurerm_virtual_network.example.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+#azurerm_public_ip.example[0]
+#azurerm_public_ip.example[1]
+#azurerm_public_ip.example[2]
+resource "azurerm_public_ip" "example" {
+  count = "${ trimspace(data.template_file.myenv.rendered) == "prd" ? 3 : trimspace(data.template_file.myenv.rendered) == "uat" ? 2 : 1 }"
+  name                = "${var.prefix}-pubip-${count.index}"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  allocation_method   = "Static"
+}
+
+#azurerm_network_interface.example[0]
+#azurerm_network_interface.example[1]
+#azurerm_network_interface.example[2]
+resource "azurerm_network_interface" "example" {
+  count = "${ trimspace(data.template_file.myenv.rendered) == "prd" ? 3 : trimspace(data.template_file.myenv.rendered) == "uat" ? 2 : 1 }"
+  name                = "${var.prefix}-nic-${count.index}"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.example.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.example[count.index].id
+  }
+}
+
+#azurerm_linux_virtual_machine.example[0]
+#azurerm_linux_virtual_machine.example[1]
+#azurerm_linux_virtual_machine.example[2]
+resource "azurerm_linux_virtual_machine" "example" {
+  count = "${ trimspace(data.template_file.myenv.rendered) == "prd" ? 3 : trimspace(data.template_file.myenv.rendered) == "uat" ? 2 : 1 }"
+  name                = "${var.prefix}-vm-${count.index}-${trimspace(data.template_file.myenv.rendered)}"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  size                = var.myvm.size
+  admin_username      = var.myvm.admin_username
+  admin_password      = var.myvm.admin_password
+  disable_password_authentication = "false"
+
+  network_interface_ids = [
+    azurerm_network_interface.example[count.index].id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+}
+[root@master azure_template]# cat env
+ sagar
+
+
+##############################################################
+
+[root@master ~]# cd
+[root@master ~]# mkdir jsonread/   ^C
+[root@master ~]# cd jsonread/
+[root@master jsonread]# cat mydata.json
+{
+    "project": [
+        {
+            "user_name": "devuser",
+            "env": "dev"
+        },
+        {
+            "user_name": "prduser",
+            "env": "prd"
+        }
+    ]
+}
+[root@master jsonread]# cat mydata.csv
+user_name,env
+devuser,dev
+prduser,prd
+[root@master jsonread]# cat main.tf
+locals {
+  #jsondecode converts JSON to HCL
+  myjsondata = jsondecode(file("mydata.json"))
+  anothervar = "anothervalue"
+  mycsvdata = csvdecode(file("mydata.csv"))
+}
+
+output "PrintJSONdata" {
+  value = local.myjsondata
+}
+
+output "PrintDevUser" {
+  value = local.myjsondata.project.0.user_name
+}
+
+output "PrintCSVdata" {
+  value = local.mycsvdata
+}
+
+output "PrintDevUserCSV" {
+  value = local.mycsvdata.0.user_name
+}
+
+output "PrintHeader" {
+  value = [
+    for x in keys(local.mycsvdata.0):
+      x
+  ]
+}
+
+############################################################
+
+[root@master jsonread]# export TF_VAR_myname="Sagar Mehta"
+[root@master jsonread]# echo $TF_VAR_myname
+Sagar Mehta
+[root@master jsonread]# cat main.tf | tail -8
+variable "myname" {
+}
+
+output "printenvmyname" {
+  value = var.myname
+}
+
+
+###########################################################
+
+
+
+
+[root@master ~]# cd
+[root@master ~]# mkdir terraform_remote/   ^C
+[root@master ~]# cd terraform_remote/
+[root@master terraform_remote]# cp -fr ../azure_vm/main.tf .     ^C
+[root@master terraform_remote]# cat main.tf | head -7
+terraform {
+  backend "local" {
+    path = "/etc/mystatefile"
+  }
+
+  required_providers {
+    azurerm = {
+[root@master terraform_remote]# terraform init   ^C
+[root@master terraform_remote]# terraform apply -auto-approve    ^C
+[root@master terraform_remote]# ls -ltr /etc/mystatefile*
+-rw-r--r-- 1 root root 10046 Mar 30 11:04 /etc/mystatefile.backup
+-rw-r--r-- 1 root root 10530 Mar 30 11:04 /etc/mystatefile
+
+
+##################################################
+
+[root@master ~]# cd
+[root@master ~]# mkdir time_sleep/   
+[root@master ~]# cd time_sleep/
+[root@master time_sleep]# cat main.tf
+resource "null_resource" "next" {
+  depends_on = [time_sleep.wait30sec]
+}
+
+resource "null_resource" "previous" {}
+
+resource "time_sleep" "wait30sec" {
+  depends_on = [null_resource.previous]
+  create_duration = "30s"
+}
+[root@master time_sleep]# terraform init    
+[root@master time_sleep]# terraform apply -auto-approve    
+
+
+########################################################
+
+[root@master ~]# cd 
+[root@master ~]# mkdir -p terraform_modules/webserver
+[root@master ~]# cd terraform_modules/webserver
+[root@master webserver]# cp -fr ../../azure_vars/*.tf .
+[root@master webserver]# ls -ltr
+total 16
+-rw-r--r-- 1 root root 2067 Mar 30 12:21 main.tf
+-rw-r--r-- 1 root root  528 Mar 30 12:21 vars.tf
+-rw-r--r-- 1 root root  365 Mar 30 12:21 provider.tf
+-rw-r--r-- 1 root root   90 Mar 30 12:21 out.tf
+[root@master webserver]# pwd
+/root/terraform_modules/webserver
+
+
+
+
+
+
+[root@master ~]# cd
+[root@master ~]# mkdir call_module/   ^C
+[root@master ~]# cd call_module/
+[root@master call_module]# cat call.tf
+module "mymodule" {
+  source = "/root/terraform_modules/webserver"
+  prefix = "mehta"
+}
+
+output "MyOpfromModule" {
+  value =  module.mymodule.MyPublicIP
+}
+[root@master call_module]# terraform init    ^C
+[root@master call_module]# terraform apply -auto-approve        ^C
+[root@master call_module]# ls -lta
+total 28
+drwxr-xr-x   3 root root    91 Mar 30 12:30 .
+-rw-r--r--   1 root root 12406 Mar 30 12:30 terraform.tfstate
+dr-xr-x---. 18 root root  4096 Mar 30 12:28 ..
+-rw-r--r--   1 root root   155 Mar 30 12:28 call.tf
+-rw-r--r--   1 root root  1185 Mar 30 12:24 .terraform.lock.hcl
+drwxr-xr-x   4 root root    38 Mar 30 12:24 .terraform
+
+
+
+################################################
+
+
+[root@master ~]# cd
+[root@master ~]# mkdir azure_import/   ^C
+[root@master ~]# cd azure_import/
+[root@master azure_import]# cat provider.tf
+terraform {
+  required_providers {
+    azurerm = {
+      source = "hashicorp/azurerm"
+      version = "3.97.1"
+    }
+  }
+}
+
+provider "azurerm" {
+  features {}
+  client_id                   = "37a0369c-41ef-43bb-bb6c-27ea9f246ce0"
+  client_certificate_path     = "/root/mycert.pfx"
+  tenant_id                   = "df8af829-df8a-41fe-8679-3e0a616165c5"
+  subscription_id             = "bbbd26d1-25ec-4756-8dd7-085194738e44"
+}
+
+import {
+  to = azurerm_resource_group.sample
+  id = "/subscriptions/bbbd26d1-25ec-4756-8dd7-085194738e44/resourceGroups/mehta-rg"
+}
+
+
+import {
+  to = azurerm_subnet.sample
+  id = "/subscriptions/bbbd26d1-25ec-4756-8dd7-085194738e44/resourceGroups/mehta-rg/providers/Microsoft.Network/virtualNetworks/mehta-vnet/subnets/mehta-subnet"
+}
+
+import {
+  to = azurerm_virtual_network.sample
+  id = "/subscriptions/bbbd26d1-25ec-4756-8dd7-085194738e44/resourceGroups/mehta-rg/providers/Microsoft.Network/virtualNetworks/mehta-vnet"
+}
+
+import {
+  to = azurerm_public_ip.sample
+  id = "/subscriptions/bbbd26d1-25ec-4756-8dd7-085194738e44/resourceGroups/mehta-rg/providers/Microsoft.Network/publicIPAddresses/mehta-pubip"
+}
+
+import {
+  to = azurerm_network_interface.sample
+  id = "/subscriptions/bbbd26d1-25ec-4756-8dd7-085194738e44/resourceGroups/mehta-rg/providers/Microsoft.Network/networkInterfaces/mehta-nic"
+}
+
+import {
+  to = azurerm_linux_virtual_machine.sample
+  id = "/subscriptions/bbbd26d1-25ec-4756-8dd7-085194738e44/resourceGroups/mehta-rg/providers/Microsoft.Compute/virtualMachines/mehta-vm"
+}
+[root@master azure_import]# terraform init    ^C
+[root@master azure_import]# terraform plan -generate-config-out="main.tf"     ^C
+[root@master azure_import]# CORRECT ERRORS in MAIN.TF     ^C
+
+
+azurerm_virtual_network -->
+  #flow_timeout_in_minutes = 0
+  #subnet = [{
+  #  address_prefix = "10.0.2.0/24"
+  #  id             = "/subscriptions/bbbd26d1-25ec-4756-8dd7-085194738e44/resourceGroups/mehta-rg/providers/Microsoft.Network/virtualNetworks/mehta-vnet/subnets/mehta-subnet"
+  #  name           = "mehta-subnet"
+  #  security_group = ""
+  #}]
+
+azurerm_subnet --> 
+  #service_endpoint_policy_ids                   = []
+
+
+azurerm_linux_virtual_machine -->
+#platform_fault_domain                                  = -1
+
+
+
+[root@master azure_import]# terraform apply      ^C
+[root@master azure_import]# ls -ltr
+total 36
+-rw-r--r-- 1 root root  1526 Mar 30 13:22 provider.tf
+-rw-r--r-- 1 root root  7237 Mar 30 13:28 main.tf
+-rw-r--r-- 1 root root 11638 Mar 30 13:30 terraform.tfstate
+
+####################################################
+
+
+[root@master ~]# cd
+[root@master ~]# mkdir azure_workspace/    ^C
+[root@master ~]# cd azure_workspace/
+[root@master azure_workspace]# cp -fr ../azure_ifelse/*.tf .     ^C
+[root@master azure_workspace]# cat vars.tf
+variable "client_id" {
+  default = "37a0369c-41ef-43bb-bb6c-27ea9f246ce0"
+}
+
+variable "client_certificate_path" {
+  default = "/root/mycert.pfx"
+}
+
+variable "tenant_id" {
+  default = "df8af829-df8a-41fe-8679-3e0a616165c5"
+}
+
+variable "subscription_id" {
+  default = "bbbd26d1-25ec-4756-8dd7-085194738e44"
+}
+
+variable "prefix" {
+  default = "sagar"
+}
+
+variable "location" {
+  default = "Central India"
+}
+
+variable "myvm" {
+  default = { size = "Standard_B1s", admin_username = "adminuser", admin_password = "Sagar@123@Sagar" }
+}
+[root@master azure_workspace]# cat main.tf
+resource "azurerm_resource_group" "example" {
+  name     = "${var.prefix}-${terraform.workspace}-rg"
+  location = var.location
+}
+
+resource "azurerm_virtual_network" "example" {
+  name                = "${var.prefix}-${terraform.workspace}-vnet"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+}
+
+resource "azurerm_subnet" "example" {
+  name                 = "${var.prefix}-${terraform.workspace}-subnet"
+  resource_group_name  = azurerm_resource_group.example.name
+  virtual_network_name = azurerm_virtual_network.example.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+#azurerm_public_ip.example[0]
+#azurerm_public_ip.example[1]
+#azurerm_public_ip.example[2]
+resource "azurerm_public_ip" "example" {
+  count = "${ terraform.workspace == "prd" ? 3 : terraform.workspace == "uat" ? 2 : 1 }"
+  name                = "${var.prefix}-pubip-${terraform.workspace}-${count.index}"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  allocation_method   = "Static"
+}
+
+#azurerm_network_interface.example[0]
+#azurerm_network_interface.example[1]
+#azurerm_network_interface.example[2]
+resource "azurerm_network_interface" "example" {
+  count = "${ terraform.workspace == "prd" ? 3 : terraform.workspace == "uat" ? 2 : 1 }"
+  name                = "${var.prefix}-nic-${terraform.workspace}-${count.index}"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.example.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.example[count.index].id
+  }
+}
+
+#azurerm_linux_virtual_machine.example[0]
+#azurerm_linux_virtual_machine.example[1]
+#azurerm_linux_virtual_machine.example[2]
+resource "azurerm_linux_virtual_machine" "example" {
+  count = "${ terraform.workspace == "prd" ? 3 : terraform.workspace == "uat" ? 2 : 1 }"
+  name                = "${var.prefix}-vm-${count.index}-${terraform.workspace}"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  size                = var.myvm.size
+  admin_username      = var.myvm.admin_username
+  admin_password      = var.myvm.admin_password
+  disable_password_authentication = "false"
+
+  network_interface_ids = [
+    azurerm_network_interface.example[count.index].id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+}
+
+[root@master azure_workspace]# terraform init    ^C
+
+
+
+[root@master azure_workspace]# terraform workspace new dev
+Created and switched to workspace "dev"!
+
+You're now on a new, empty workspace. Workspaces isolate their state,
+so if you run "terraform plan" Terraform will not see any existing state
+for this configuration.
+[root@master azure_workspace]# terraform workspace show
+dev
+[root@master azure_workspace]# terraform workspace list
+  default
+* dev
+
+[root@master azure_workspace]# terraform apply 
+
+
+
+
+[root@master azure_workspace]# terraform workspace new uat
+Created and switched to workspace "uat"!
+
+You're now on a new, empty workspace. Workspaces isolate their state,
+so if you run "terraform plan" Terraform will not see any existing state
+for this configuration.
+[root@master azure_workspace]# terraform workspace show
+uat
+[root@master azure_workspace]# terraform workspace list
+  default
+  dev
+* uat
+
+[root@master azure_workspace]# terraform apply
+
+
+
+
+
+[root@master azure_workspace]# terraform workspace new prd
+Created and switched to workspace "prd"!
+
+You're now on a new, empty workspace. Workspaces isolate their state,
+so if you run "terraform plan" Terraform will not see any existing state
+for this configuration.
+[root@master azure_workspace]# terraform workspace show
+prd
+[root@master azure_workspace]# terraform workspace list
+  default
+  dev
+* prd
+  uat
+
+[root@master azure_workspace]# terraform apply
+
+
+
+[root@master azure_workspace]# ls -ltr terraform.tfstate.d/
+total 0
+drwxr-xr-x 2 root root 31 Mar 30 15:36 dev
+drwxr-xr-x 2 root root 31 Mar 30 15:40 uat
+drwxr-xr-x 2 root root 67 Mar 30 15:41 prd
+[root@master azure_workspace]# ls -ltr terraform.tfstate.d/dev/
+total 12
+-rw-r--r-- 1 root root 12189 Mar 30 15:36 terraform.tfstate
+[root@master azure_workspace]# ls -ltr terraform.tfstate.d/uat/
+total 20
+-rw-r--r-- 1 root root 19863 Mar 30 15:40 terraform.tfstate
+[root@master azure_workspace]# ls -ltr terraform.tfstate.d/prd/
+total 28
+-rw-r--r-- 1 root root 27524 Mar 30 15:43 terraform.tfstate
+
+
+[root@master azure_workspace]# terraform workspace list
+  default
+  dev
+* prd
+  uat
+
+[root@master azure_workspace]# terraform workspace select dev
+Switched to workspace "dev".
+[root@master azure_workspace]# terraform workspace list
+  default
+* dev
+  prd
+  uat
+
+
+terraform workspace select dev ; terraform destroy -auto-approve ; terraform workspace select default ; terraform workspace delete dev
+
+terraform workspace select uat ; terraform destroy -auto-approve ; terraform workspace select default ; terraform workspace delete uat
+
+terraform workspace select prd ; terraform destroy -auto-approve ; terraform workspace select default ; terraform workspace delete prd
+
+##################################################
+Exercise: 
+Create an Azure Machine(Ubuntu 22.04) instance using terraform variables defined in variable.tf, having output Url/IP and Port and running Web Server.
+Steps Apache Web Server Install:
+sudo apt-get update -y
+sudo apt-get install apache2 -y
+sudo systemctl restart apache2
+sudo systemctl enable apache2
+
+Output Check: http://PUBLIC_IP
+
+##################################################
+
+[root@master ~]# cd
+[root@master ~]# mkdir azure_web/   ^C
+[root@master ~]# cd azure_web/
+[root@master azure_web]# cat web.sh
+#!/bin/sh
+sudo apt-get update -y
+sudo apt-get install apache2 -y
+sudo systemctl restart apache2
+sudo systemctl enable apache2
+[root@master azure_web]# cat vars.tf
+variable "client_id" {
+  default = "37a0369c-41ef-43bb-bb6c-27ea9f246ce0"
+}
+
+variable "client_certificate_path" {
+  default = "/root/mycert.pfx"
+}
+
+variable "tenant_id" {
+  default = "df8af829-df8a-41fe-8679-3e0a616165c5"
+}
+
+variable "subscription_id" {
+  default = "bbbd26d1-25ec-4756-8dd7-085194738e44"
+}
+
+variable "prefix" {
+  default = "sagar-web"
+}
+
+variable "location" {
+  default = "Central India"
+}
+
+variable "myvm" {
+  default = { size = "Standard_B1s", admin_username = "adminuser", admin_password = "Sagar@123@Sagar" }
+}
+[root@master azure_web]# cat provider.tf
+terraform {
+  required_providers {
+    azurerm = {
+      source = "hashicorp/azurerm"
+      version = "3.97.1"
+    }
+  }
+}
+
+provider "azurerm" {
+  features {}
+  client_id                   = var.client_id
+  client_certificate_path     = var.client_certificate_path
+  tenant_id                   = var.tenant_id
+  subscription_id             = var.subscription_id
+}
+[root@master azure_web]# cat main.tf
+resource "azurerm_resource_group" "web" {
+  name     = "${var.prefix}-rg"
+  location = var.location
+}
+
+resource "azurerm_virtual_network" "web" {
+  name                = "${var.prefix}-vnet"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.web.location
+  resource_group_name = azurerm_resource_group.web.name
+}
+
+resource "azurerm_subnet" "web" {
+  name                 = "${var.prefix}-subnet"
+  resource_group_name  = azurerm_resource_group.web.name
+  virtual_network_name = azurerm_virtual_network.web.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+resource "azurerm_public_ip" "web" {
+  name                = "${var.prefix}-pubip"
+  resource_group_name = azurerm_resource_group.web.name
+  location            = azurerm_resource_group.web.location
+  allocation_method   = "Static"
+}
+
+resource "azurerm_network_interface" "web" {
+  name                = "${var.prefix}-nic"
+  location            = azurerm_resource_group.web.location
+  resource_group_name = azurerm_resource_group.web.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.web.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.web.id
+  }
+}
+
+resource "azurerm_linux_virtual_machine" "web" {
+  name                = "${var.prefix}-vm"
+  resource_group_name = azurerm_resource_group.web.name
+  location            = azurerm_resource_group.web.location
+  size                = var.myvm.size
+  admin_username      = var.myvm.admin_username
+  admin_password      = var.myvm.admin_password
+  disable_password_authentication = "false"
+
+  network_interface_ids = [
+    azurerm_network_interface.web.id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+
+  provisioner "file" {
+    source = "web.sh"
+    destination = "/tmp/web.sh"
+    connection {
+      type = "ssh"
+      user = var.myvm.admin_username
+      password = var.myvm.admin_password
+      host = self.public_ip_address
+    }
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "echo Installing Apache Web Server",
+      "chmod 755 /tmp/web.sh",
+      "/tmp/web.sh",
+      "echo Apache Web Server Installed"
+    ]
+    connection {
+      type = "ssh"
+      user = var.myvm.admin_username
+      password = var.myvm.admin_password
+      host = self.public_ip_address
+    }
+  }
+}
+[root@master azure_web]# cat out.tf
+output "MyPublicIP" {
+  value = azurerm_linux_virtual_machine.web.public_ip_address
+}
+[root@master azure_web]# terraform init   
+[root@master azure_web]# terraform apply    
+
+
+################################################################
+
+[root@master ~]# cd
+[root@master ~]# mkdir azure_aks/    ^C
+[root@master ~]# cd azure_aks/
+[root@master azure_aks]# cat main.tf
+terraform {
+  required_providers {
+    azurerm = {
+      source = "hashicorp/azurerm"
+      version = "3.97.1"
+    }
+  }
+}
+
+provider "azurerm" {
+  features {}
+  client_id                   = "37a0369c-41ef-43bb-bb6c-27ea9f246ce0"
+  client_certificate_path     = "/root/mycert.pfx"
+  tenant_id                   = "df8af829-df8a-41fe-8679-3e0a616165c5"
+  subscription_id             = "bbbd26d1-25ec-4756-8dd7-085194738e44"
+}
+
+resource "azurerm_resource_group" "example" {
+  name     = "sagar-aks-rg"
+  location = "Central India"
+}
+
+
+resource "azurerm_kubernetes_cluster" "example" {
+  name                = "sagar-aks"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+  dns_prefix          = "sagaraks"
+
+  default_node_pool {
+    name       = "default"
+    node_count = 1
+    vm_size    = "Standard_D2_v2"
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+}
+
+resource "local_file" "example" {
+  content  = azurerm_kubernetes_cluster.example.kube_config_raw
+  filename = "config"
+}
+
+
+#############################################################
+
+
+[root@master ~]# cd
+[root@master ~]# mkdir aks_apache/   ^C
+[root@master ~]# cd aks_apache/
+[root@master aks_apache]# cat main.tf
+terraform {
+  required_providers {
+    kubernetes = {
+      source = "hashicorp/kubernetes"
+      version = "2.27.0"
+    }
+  }
+}
+
+provider "kubernetes" {
+  config_path = "/root/azure_aks/config"
+}
+
+resource "kubernetes_deployment" "example" {
+  metadata {
+    name = "apache"
+    labels = {
+      app = "apache"
+    }
+  }
+
+  spec {
+    replicas = 3
+
+    selector {
+      match_labels = {
+        app = "apache"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "apache"
+        }
+      }
+
+      spec {
+        container {
+          image = "smehta26/apache:alpine"
+          name  = "apache"
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service" "example" {
+  metadata {
+    name = "apache-service"
+  }
+  spec {
+    selector = {
+      app = "apache"
+    }
+    port {
+      port        = 80
+      target_port = 80
+    }
+    type = "LoadBalancer"
+  }
+}
+
+[root@master aks_apache]# terraform init 
+[root@master aks_apache]# terraform apply
+
+Workloads --> apache
+Service and Ingress --> Check External IP of apache-service
+
+##################################################
+
+
+smehta26/apache:alpine
+smehta26/apache:rocky
+smehta26/apache:centos
+smehta26/apache:ubuntu
+
+##################################################
+
+https://atgensoft.com/training/JenkinsSetup.zip
+
+##################################################
+
+1) wget https://atgensoft.com/training/JenkinsSetup.zip
+2) unzip JenkinsSetup.zip
+3) cd JenkinsSetup
+4) ./jenkins_install.sh
+5) http://192.168.49.128:8080  [[ Get password with cat /var/lib/jenkins/secrets/initialAdminPassword ]]
+6) Click Install Suggested Plugins
+7) Click skip and continue as admin
+8) Click Save and Finish
+9) Click Start using Jenkins
+
+##################################################
+
+
+https://atgensoft.com/training/cgi-terraform-28032024-ci.pdf
+
+#################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
